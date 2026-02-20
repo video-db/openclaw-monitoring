@@ -1,8 +1,36 @@
-# OpenClaw Monitoring with VideoDB Capture
+<!-- PROJECT SHIELDS -->
+[![Python][python-shield]][python-url]
+[![Flask][flask-shield]][flask-url]
+[![Stargazers][stars-shield]][stars-url]
+[![Issues][issues-shield]][issues-url]
+[![Website][website-shield]][website-url]
 
-This guide walks you through deploying a macOS EC2 instance on AWS, installing [OpenClaw](https://openclaw.ai) on it, and using [VideoDB Capture](https://videodb.io) to continuously monitor and record the agent's screen activity.
+<!-- PROJECT LOGO -->
+<br />
+<p align="center">
+  <a href="https://videodb.io/">
+    <img src="https://codaio.imgix.net/docs/_s5lUnUCIU/blobs/bl-RgjcFrrJjj/d3cbc44f8584ecd42f2a97d981a144dce6a66d83ddd5864f723b7808c7d1dfbc25034f2f25e1b2188e78f78f37bcb79d3c34ca937cbb08ca8b3da1526c29da9a897ab38eb39d084fd715028b7cc60eb595c68ecfa6fa0bb125ec2b09da65664a4f172c2f" alt="Logo" width="300" height="">
+  </a>
 
-> Windows and Linux guides coming soon.
+  <h1 align="center">OpenClaw Monitoring with VideoDB Capture</h1>
+
+  <p align="center">
+    This guide walks you through deploying a macOS EC2 instance on AWS, installing <a href="https://openclaw.ai">OpenClaw</a> on it, and using <a href="https://videodb.io">VideoDB Capture</a> to continuously monitor and record the agent's screen activity.
+    <br />
+    <a href="https://docs.videodb.io"><strong>Explore the docs »</strong></a>
+    <br />
+    <br />
+    <a href="#try-it-without-any-setup">Quick Start</a>
+    ·
+    <a href="#table-of-contents">View Guide</a>
+    ·
+    <a href="https://github.com/video-db/openclaw-monitoring/issues">Report Bug</a>
+  </p>
+</p>
+
+<p align="center">
+  <em>Windows and Linux guides coming soon.</em>
+</p>
 
 ---
 
@@ -347,3 +375,28 @@ async for msg in ws.receive():
         print(f"Alert [{data.get('label')}]: confidence={data.get('confidence')} {data.get('text')}")
 ```
 
+
+## Community & Support
+
+- **Docs**: [docs.videodb.io](https://docs.videodb.io)
+- **Issues**: [GitHub Issues](https://github.com/video-db/openclaw-monitoring/issues)
+- **Discord**: [Join community](https://discord.gg/py9P639jGz)
+- **Console**: [Get API key](https://console.videodb.io)
+
+---
+
+<p align="center">Made with ❤️ by the <a href="https://videodb.io">VideoDB</a> team</p>
+
+---
+
+<!-- MARKDOWN LINKS & IMAGES -->
+[python-shield]: https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white
+[python-url]: https://www.python.org/
+[flask-shield]: https://img.shields.io/badge/Flask-3.1-000000?style=for-the-badge&logo=flask&logoColor=white
+[flask-url]: https://flask.palletsprojects.com/
+[stars-shield]: https://img.shields.io/github/stars/video-db/openclaw-monitoring.svg?style=for-the-badge
+[stars-url]: https://github.com/video-db/openclaw-monitoring/stargazers
+[issues-shield]: https://img.shields.io/github/issues/video-db/openclaw-monitoring.svg?style=for-the-badge
+[issues-url]: https://github.com/video-db/openclaw-monitoring/issues
+[website-shield]: https://img.shields.io/website?url=https%3A%2F%2Fvideodb.io%2F&style=for-the-badge&label=videodb.io
+[website-url]: https://videodb.io/
