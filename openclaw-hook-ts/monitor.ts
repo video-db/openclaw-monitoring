@@ -83,7 +83,7 @@ async function capture(token: string, sessionId: string): Promise<never> {
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
 
-  await client.requestPermission("screen_capture");
+  await client.requestPermission("screen-capture");
   await client.requestPermission("microphone");
 
   const channels = await client.listChannels();
