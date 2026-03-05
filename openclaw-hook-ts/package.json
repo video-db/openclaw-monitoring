@@ -1,0 +1,18 @@
+{
+  "name": "videodb-screen-replay",
+  "version": "1.0.0",
+  "description": "OpenClaw hook for automatic screen recording replay",
+  "type": "module",
+  "main": "handler.ts",
+  "scripts": {
+    "monitor": "npx tsx monitor.ts"
+  },
+  "dependencies": {
+    "videodb": "^0.2.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

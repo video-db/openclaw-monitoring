@@ -4,6 +4,7 @@ import threading
 import queue
 import asyncio
 import traceback
+import argparse
 from flask import Flask, request, jsonify
 from pycloudflared import try_cloudflare
 from dotenv import load_dotenv
@@ -41,14 +42,36 @@ ALERTS = [
         ),
     },
     {
-        "label": "browser-open",
+        "label": "error-found",
         "prompt": (
-            "A web browser window (such as Chrome, Firefox, Safari, or Edge) is open "
-            "and visible on screen. The browser could be showing any webpage, search "
-            "results, documentation, or any other web content."
+            "The screen is displaying any kind of error condition. This includes: "
+            "failed to load pages, 403 Forbidden, 404 Not Found, 500 Internal Server Error, "
+            "access denied messages, connection refused, timeout errors, authentication failures, "
+            "permission denied, SSL certificate errors, DNS resolution failures, "
+            "or any other error messages, warning dialogs, or failure indicators visible on screen."
+        ),
+    },
+    {
+        "label": "amazon-found",
+        "prompt": (
+            "The screen is showing Amazon.com or any Amazon website (amazon.com, amazon.co.uk, etc.). "
+            "This includes Amazon search results, product pages, cart, checkout, order history, "
+            "or any other Amazon webpage visible in a browser."
         ),
     },
 ]
+
+DEFAULT_VISUAL_PROMPT = (
+    "Describe the screen: "
+    "(1) Active application and current agent activity. "
+    "(2) Browser status - is one open? What URL/page? "
+    "(3) Error conditions - any dialogs, crashes, tracebacks, HTTP errors (403/404/500), access denied, connection failures, or warning messages? "
+    "(4) If Amazon.com is visible, note the product name(s), prices, ratings, and any deal/discount information shown. "
+    "(5) Timestamp if a clock is visible."
+)
+
+# Will be set by CLI args
+visual_prompt = DEFAULT_VISUAL_PROMPT
 
 
 # --- Initialization ---
@@ -254,7 +277,7 @@ def webhook():
                 ws_id = q.get(timeout=10)
 
                 visual_index = display.index_visuals(
-                    prompt="In one sentence, describe the active application and what the agent is doing on screen. Note the current time if a clock is visible.",
+                    prompt=visual_prompt,
                     ws_connection_id=ws_id,
                 )
                 print(f"  Visual indexing started (socket: {ws_id})")
@@ -289,5 +312,16 @@ def webhook():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="OpenClaw Monitoring Backend")
+    parser.add_argument(
+        "--visual-prompt",
+        type=str,
+        default=DEFAULT_VISUAL_PROMPT,
+        help="Custom prompt for visual indexing (default: describe active application and agent activity)",
+    )
+    args = parser.parse_args()
+
+    visual_prompt = args.visual_prompt  # noqa: F841 - used in webhook handler
+
     setup()
     app.run(port=PORT)
