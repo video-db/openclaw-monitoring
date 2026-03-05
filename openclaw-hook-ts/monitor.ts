@@ -96,8 +96,8 @@ async function capture(token: string, sessionId: string): Promise<never> {
   }
 
   const selected = [
-    display && { channelId: display.channelId, type: "video" as const, store: true },
-    systemAudio && { channelId: systemAudio.channelId, type: "audio" as const, store: true },
+    display && { channelId: display.id, type: "video" as const, store: true },
+    systemAudio && { channelId: systemAudio.id, type: "audio" as const, store: true },
   ].filter(Boolean);
 
   console.log(`\nRecording ${selected.length} channel(s):`);
