@@ -5,7 +5,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 
-const OPENCLAW_CONFIG_PATH = path.join(os.homedir(), ".openclaw", "config.json");
+const OPENCLAW_CONFIG_PATH = path.join(os.homedir(), ".openclaw", "openclaw.json");
 
 interface OpenClawConfig {
   hooks?: {
