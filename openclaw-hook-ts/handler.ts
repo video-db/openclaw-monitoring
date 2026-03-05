@@ -10,8 +10,12 @@ interface VideoDBConfig {
 }
 
 interface OpenClawConfig {
-  entries?: {
-    videodb?: VideoDBConfig;
+  hooks?: {
+    internal?: {
+      entries?: {
+        videodb?: VideoDBConfig;
+      };
+    };
   };
 }
 
@@ -52,7 +56,7 @@ let stream: RTStream | null = null;
 let activeSessionId: string | null = null;
 
 function cfg(event: HookEvent): VideoDBConfig {
-  return event.context.cfg?.entries?.videodb || {};
+  return event.context.cfg?.hooks?.internal?.entries?.videodb || {};
 }
 
 function correlationKey(

@@ -8,10 +8,14 @@ import * as os from "os";
 const OPENCLAW_CONFIG_PATH = path.join(os.homedir(), ".openclaw", "config.json");
 
 interface OpenClawConfig {
-  entries?: {
-    videodb?: {
-      apiKey?: string;
-      captureSessionId?: string;
+  hooks?: {
+    internal?: {
+      entries?: {
+        videodb?: {
+          apiKey?: string;
+          captureSessionId?: string;
+        };
+      };
     };
   };
 }
@@ -30,22 +34,23 @@ function readOpenClawConfig(): OpenClawConfig {
 function getApiKey(): string | undefined {
   const config = readOpenClawConfig();
   return (
-    config.entries?.videodb?.apiKey ||
+    config.hooks?.internal?.entries?.videodb?.apiKey ||
     process.env.VIDEODB_API_KEY ||
     process.env.VIDEO_DB_API_KEY
   );
 }
 
 function updateSessionId(sessionId: string): void {
+  const configPath = "hooks.internal.entries.videodb.captureSessionId";
   try {
-    execSync(`openclaw config set entries.videodb.captureSessionId '${sessionId}'`, {
+    execSync(`openclaw config set ${configPath} '${sessionId}'`, {
       timeout: 10000,
       stdio: "pipe",
     });
-    console.log(`  Config updated: entries.videodb.captureSessionId`);
+    console.log(`  Config updated: ${configPath}`);
   } catch {
     console.log(`  [warning] Could not update config. Set manually:`);
-    console.log(`    openclaw config set entries.videodb.captureSessionId '${sessionId}'`);
+    console.log(`    openclaw config set ${configPath} '${sessionId}'`);
   }
 }
 
@@ -111,7 +116,7 @@ async function main() {
   const apiKey = getApiKey();
   if (!apiKey) {
     console.error("API key not found. Set it via:");
-    console.error("  openclaw config set entries.videodb.apiKey 'sk-xxx'");
+    console.error("  openclaw config set hooks.internal.entries.videodb.apiKey 'sk-xxx'");
     process.exit(1);
   }
 
