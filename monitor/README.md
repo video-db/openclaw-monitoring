@@ -59,7 +59,7 @@ npm install
 ### Step 5: Restart OpenClaw Gateway
 
 ```bash
-openclaw restart
+openclaw gateway restart
 ```
 
 Or if the gateway isn't running:
