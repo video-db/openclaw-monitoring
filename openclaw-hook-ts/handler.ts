@@ -47,7 +47,7 @@ interface PendingMessage {
 
 interface HookEvent {
   type: "message";
-  action: "received" | "sent";
+  action: "received" | "sent" | "preprocessed";
   sessionKey: string;
   timestamp: Date;
   messages: string[];
@@ -176,7 +176,7 @@ const handler = async (event: HookEvent): Promise<void> => {
     return;
   }
 
-  if (action === "sent") {
+  if (action === "sent" || action === "preprocessed") {
     if (context.success === false) {
       log("skipping: success=false");
       return;
