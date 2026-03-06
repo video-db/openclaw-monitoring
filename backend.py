@@ -51,14 +51,6 @@ ALERTS = [
             "or any other error messages, warning dialogs, or failure indicators visible on screen."
         ),
     },
-    {
-        "label": "amazon-found",
-        "prompt": (
-            "The screen is showing Amazon.com or any Amazon website (amazon.com, amazon.co.uk, etc.). "
-            "This includes Amazon search results, product pages, cart, checkout, order history, "
-            "or any other Amazon webpage visible in a browser."
-        ),
-    },
 ]
 
 DEFAULT_VISUAL_PROMPT = (
@@ -66,8 +58,7 @@ DEFAULT_VISUAL_PROMPT = (
     "(1) Active application and current agent activity. "
     "(2) Browser status - is one open? What URL/page? "
     "(3) Error conditions - any dialogs, crashes, tracebacks, HTTP errors (403/404/500), access denied, connection failures, or warning messages? "
-    "(4) If Amazon.com is visible, note the product name(s), prices, ratings, and any deal/discount information shown. "
-    "(5) Timestamp if a clock is visible."
+    "(4) Timestamp if a clock is visible."
 )
 
 # Will be set by CLI args
@@ -321,7 +312,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    visual_prompt = args.visual_prompt  # noqa: F841 - used in webhook handler
+    visual_prompt = args.visual_prompt
 
     setup()
     app.run(port=PORT)
