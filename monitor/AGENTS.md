@@ -5,9 +5,9 @@ Append the section below to your `~/.openclaw/workspace/AGENTS.md` to enable aut
 ---
 
 ## How to Install
+Copy this to your clipboard and append to your AGENTS.md
 
-```bash
-# Copy this to your clipboard and append to your AGENTS.md
+````bash
 cat >> ~/.openclaw/workspace/AGENTS.md << 'EOF'
 
 ## VideoDB Screen Recording (MANDATORY)
@@ -77,7 +77,7 @@ Your response:
 **If you forget to capture start_time, use the current time as both start and end - a 0-second clip is better than no clip.**
 
 EOF
-```
+````
 
 ---
 
