@@ -188,7 +188,7 @@ const handler = async (event: HookEvent): Promise<void> => {
 
     if (!match) {
       for (const [k, p] of pending.entries()) {
-        if (p.channelId === channelId && p.accountId === accountId && p.conversationId === conversationId) {
+        if (p.channelId === channelId && p.conversationId === conversationId) {
           match = p;
           pending.delete(k);
           log(`fallback match found: key=${k}`);
