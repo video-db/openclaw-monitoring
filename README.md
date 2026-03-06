@@ -34,6 +34,47 @@
 
 ---
 
+## Quick Start: OpenClaw Skill Integration
+
+If you're running OpenClaw and want the agent to automatically include screen recording links in every response, use the `monitor/` directory.
+
+### Setup
+
+**1. Configure OpenClaw:**
+
+```bash
+openclaw config set hooks.internal.entries.videodb.apiKey 'sk-xxx'
+```
+
+**2. Start the monitor:**
+
+```bash
+cd monitor
+npm install
+npx tsx monitor.ts
+```
+
+Keep this terminal running.
+
+**3. Install the skill (new terminal):**
+
+```bash
+cp -r monitor/openclaw-skill ~/.openclaw/workspace/skills/videodb
+cd ~/.openclaw/workspace/skills/videodb && npm install
+```
+
+**4. Restart OpenClaw:**
+
+```bash
+openclaw restart
+```
+
+That's it! The agent will now include screen recording URLs in every response.
+
+See [`monitor/README.md`](monitor/README.md) for detailed instructions and troubleshooting.
+
+---
+
 ## Try It Without Any Setup
 
 Want to skip the EC2 and OpenClaw installation? VideoDB hosts a live OpenClaw agent at `[matrix.videodb.io](https://matrix.videodb.io)` that you can monitor right away. Just add your `VIDEO_DB_API_KEY` to a `.env` file and run:
