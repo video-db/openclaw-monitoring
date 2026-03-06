@@ -1,5 +1,22 @@
 import { connect, type Connection } from "videodb";
 import type { RTStream } from "videodb";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
+
+const LOG_DIR = path.join(os.homedir(), ".videodb", "logs");
+const LOG_FILE = path.join(LOG_DIR, "hook.log");
+
+function log(message: string): void {
+  const timestamp = new Date().toISOString();
+  const line = `${timestamp} ${message}\n`;
+  try {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+    fs.appendFileSync(LOG_FILE, line);
+  } catch {
+    // ignore
+  }
+}
 
 interface VideoDBConfig {
   apiKey?: string;
@@ -72,6 +89,8 @@ async function initStream(config: VideoDBConfig): Promise<void> {
   const apiKey = config.apiKey || process.env.VIDEODB_API_KEY;
   const sessionId = config.captureSessionId || process.env.VIDEODB_CAPTURE_SESSION_ID;
 
+  log(`initStream: apiKey=${apiKey ? "set" : "missing"} sessionId=${sessionId || "missing"}`);
+
   if (!apiKey || !sessionId) return;
 
   if (activeSessionId && activeSessionId !== sessionId) {
@@ -93,7 +112,7 @@ async function initStream(config: VideoDBConfig): Promise<void> {
       activeSessionId = sessionId;
     }
   } catch (err) {
-    console.error("[videodb-replay] init failed:", err);
+    log(`initStream error: ${err}`);
   }
 }
 
@@ -112,22 +131,29 @@ async function generateClip(
       Math.floor(endTime + buffer)
     );
   } catch (err) {
-    console.error("[videodb-replay] clip failed:", err);
+    log(`generateClip error: ${err}`);
     return null;
   }
 }
 
 const handler = async (event: HookEvent): Promise<void> => {
+  log(`event: type=${event.type} action=${event.action}`);
+
   if (event.type !== "message") return;
 
   const content = event.context.content || "";
-  if (content.includes(REPLAY_MARKER)) return;
+  if (content.includes(REPLAY_MARKER)) {
+    log("skipping: replay marker found");
+    return;
+  }
 
   const { action, context } = event;
   const channelId = context.channelId;
   const accountId = context.accountId;
   const conversationId = context.conversationId || context.from || "unknown";
   const now = Date.now() / 1000;
+
+  log(`channel=${channelId} conversation=${conversationId} action=${action}`);
 
   if (action === "received") {
     const threadId = context.metadata?.threadId;
@@ -146,20 +172,26 @@ const handler = async (event: HookEvent): Promise<void> => {
       from: context.from || "",
       startTime: now,
     });
+    log(`pending message stored: key=${key}`);
     return;
   }
 
   if (action === "sent") {
-    if (context.success === false) return;
+    if (context.success === false) {
+      log("skipping: success=false");
+      return;
+    }
 
     const key = correlationKey(channelId, accountId, conversationId, undefined);
     let match = pending.get(key);
+    log(`looking for pending: key=${key} found=${!!match} pendingCount=${pending.size}`);
 
     if (!match) {
       for (const [k, p] of pending.entries()) {
         if (p.channelId === channelId && p.accountId === accountId && p.conversationId === conversationId) {
           match = p;
           pending.delete(k);
+          log(`fallback match found: key=${k}`);
           break;
         }
       }
@@ -167,18 +199,30 @@ const handler = async (event: HookEvent): Promise<void> => {
       pending.delete(key);
     }
 
-    if (!match) return;
+    if (!match) {
+      log("no matching pending message found");
+      return;
+    }
 
     const config = cfg(event);
     const duration = now - match.startTime;
     const minDuration = config.minClipDuration ?? 2;
     const maxDuration = config.maxClipDuration ?? 300;
 
-    if (duration < minDuration || duration > maxDuration) return;
+    log(`duration=${duration.toFixed(1)}s min=${minDuration} max=${maxDuration}`);
 
+    if (duration < minDuration || duration > maxDuration) {
+      log(`skipping: duration out of range`);
+      return;
+    }
+
+    log(`generating clip: start=${match.startTime} end=${now}`);
     const url = await generateClip(match.startTime, now, config);
     if (url) {
+      log(`clip generated: ${url}`);
       event.messages.push(`${REPLAY_MARKER} Screen recording (${Math.floor(duration)}s): ${url}`);
+    } else {
+      log("clip generation returned null");
     }
   }
 };
