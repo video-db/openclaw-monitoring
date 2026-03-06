@@ -137,7 +137,7 @@ async function generateClip(
 }
 
 const handler = async (event: HookEvent): Promise<void> => {
-  log(`event: type=${event.type} action=${event.action}`);
+  log(`RAW event: type=${event.type} action=${event.action} channel=${event.context?.channelId} to=${event.context?.to} success=${event.context?.success}`);
 
   if (event.type !== "message") return;
 

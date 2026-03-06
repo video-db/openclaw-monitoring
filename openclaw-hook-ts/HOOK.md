@@ -4,7 +4,7 @@ description: "Sends screen recording links after agent responses"
 metadata:
   openclaw:
     emoji: "📹"
-    events: ["message:received", "message:sent"]
+    events: ["message"]
     requires:
       config: ["hooks.internal.entries.videodb.apiKey"]
 ---
