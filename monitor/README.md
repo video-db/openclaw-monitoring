@@ -50,7 +50,8 @@ In a new terminal, copy the skill to OpenClaw:
 
 ```bash
 cd monitor
-cp -r openclaw-skill ~/.openclaw/workspace/skills/videodb
+mkdir -p ~/.openclaw/workspace/skills/videodb
+cp -r openclaw-skill/* ~/.openclaw/workspace/skills/videodb
 cd ~/.openclaw/workspace/skills/videodb
 npm install
 ```
