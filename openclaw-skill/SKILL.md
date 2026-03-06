@@ -1,15 +1,7 @@
 ---
 name: videodb
 description: Search screen recordings and get summaries of agent activity. Use when the user asks to find something that happened on screen, or wants a summary of recent activity.
-metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "📹",
-        "requires": { "config": ["hooks.internal.entries.videodb.apiKey"] },
-        "primaryEnv": "VIDEODB_API_KEY",
-      },
-  }
+metadata: { "openclaw": { "emoji": "📹", "requires": { "config": ["hooks.internal.entries.videodb.apiKey"] }, "primaryEnv": "VIDEODB_API_KEY" } }
 ---
 
 # VideoDB Screen Recording Skill
@@ -18,43 +10,43 @@ You have access to indexed screen recordings of this machine. The recordings inc
 - Visual index: descriptions of what's happening on screen
 - Audio index: transcripts of system audio
 
-## Tools
+Run commands from `{baseDir}` using `npx tsx videodb.ts`.
 
-### videodb_search
+## Commands
+
+### Search
 
 Search the screen recordings for specific events or content.
 
 ```bash
-videodb search "user opened Amazon"
-videodb search "error message appeared"
-videodb search "meeting with John"
+cd {baseDir} && npx tsx videodb.ts search "user opened Amazon"
+cd {baseDir} && npx tsx videodb.ts search "error message appeared"
 ```
 
 Returns matching time ranges with playable stream URLs.
 
-### videodb_summary
+### Summary
 
 Get a summary of recent screen activity.
 
 ```bash
-videodb summary              # last 30 minutes
-videodb summary --hours 2    # last 2 hours
+cd {baseDir} && npx tsx videodb.ts summary              # last 30 minutes
+cd {baseDir} && npx tsx videodb.ts summary --hours 2    # last 2 hours
 ```
 
-### videodb_transcript
+### Transcript
 
 Get raw transcripts from system audio.
 
 ```bash
-videodb transcript           # last 30 minutes
-videodb transcript --hours 1 # last hour
+cd {baseDir} && npx tsx videodb.ts transcript           # last 30 minutes
+cd {baseDir} && npx tsx videodb.ts transcript --hours 1 # last hour
 ```
 
-## Usage
+## When to Use
 
-When the user asks:
-- "What did I do in the last hour?" → use `videodb summary`
-- "Find when I opened the spreadsheet" → use `videodb search "opened spreadsheet"`
-- "What was said in that meeting?" → use `videodb transcript`
+- "What did I do in the last hour?" → use summary
+- "Find when I opened the spreadsheet" → use search "opened spreadsheet"
+- "What was said in that meeting?" → use transcript
 
 Always include the stream URLs in your response so the user can watch the clips.
