@@ -75,7 +75,77 @@ async function createSession(apiKey: string) {
     metadata: { app: "openclaw-monitoring" },
   });
   const token = await conn.generateClientToken();
-  return { sessionId: session.id, token };
+  return { sessionId: session.id, token, conn };
+}
+
+const DEFAULT_VISUAL_PROMPT =
+  "Describe the screen: " +
+  "(1) Active application and current activity. " +
+  "(2) Browser status - is one open? What URL/page? " +
+  "(3) Any error dialogs, crashes, or warning messages? " +
+  "(4) Timestamp if a clock is visible.";
+
+function parseArgs(): { visualPrompt: string } {
+  const args = process.argv.slice(2);
+  let visualPrompt = DEFAULT_VISUAL_PROMPT;
+
+  const idx = args.indexOf("--visual-prompt");
+  if (idx !== -1 && args[idx + 1]) {
+    visualPrompt = args[idx + 1];
+  }
+
+  return { visualPrompt };
+}
+
+const cliArgs = parseArgs();
+
+async function startIndexing(apiKey: string, sessionId: string) {
+  log("waiting for session to become active before starting indexing...");
+
+  await new Promise((r) => setTimeout(r, 5000));
+
+  const conn = connect(apiKey);
+  const coll = await conn.getCollection();
+  const session = await coll.getCaptureSession(sessionId);
+  await session.refresh();
+
+  const screens = session.getRTStream("screen");
+  const audios = session.getRTStream("system_audio");
+
+  log(`found ${screens.length} screen stream(s), ${audios.length} audio stream(s)`);
+
+  if (screens.length > 0) {
+    const screen = screens[0];
+    try {
+      await screen.indexVisuals({
+        prompt: cliArgs.visualPrompt,
+        batchConfig: { type: "time", value: 5, frameCount: 1 },
+      });
+      log("visual indexing started");
+    } catch (err: any) {
+      log(`visual indexing failed: ${err.message}`);
+    }
+  }
+
+  if (audios.length > 0) {
+    const audio = audios[0];
+    try {
+      await audio.startTranscript({});
+      log("transcription started");
+    } catch (err: any) {
+      log(`transcription failed: ${err.message}`);
+    }
+
+    try {
+      await audio.indexAudio({
+        prompt: "Summarize the audio content.",
+        batchConfig: { type: "time", value: 30 },
+      });
+      log("audio indexing started");
+    } catch (err: any) {
+      log(`audio indexing failed: ${err.message}`);
+    }
+  }
 }
 
 async function capture(token: string, sessionId: string): Promise<never> {
@@ -148,6 +218,13 @@ async function capture(token: string, sessionId: string): Promise<never> {
   await client.startSession({ sessionId, channels: selected as any });
 
   log("recording started");
+
+  const apiKey = getApiKey();
+  if (apiKey) {
+    startIndexing(apiKey, sessionId).catch((err) => {
+      log(`indexing setup failed: ${err.message}`);
+    });
+  }
 
   return new Promise(() => {});
 }
