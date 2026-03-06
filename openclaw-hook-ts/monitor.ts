@@ -6,6 +6,20 @@ import * as path from "path";
 import * as os from "os";
 
 const OPENCLAW_CONFIG_PATH = path.join(os.homedir(), ".openclaw", "openclaw.json");
+const LOG_DIR = path.join(os.homedir(), ".videodb", "logs");
+const LOG_FILE = path.join(LOG_DIR, "monitor.log");
+
+function log(message: string): void {
+  const timestamp = new Date().toISOString();
+  const line = `${timestamp} ${message}\n`;
+  try {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+    fs.appendFileSync(LOG_FILE, line);
+  } catch {
+    // ignore
+  }
+  console.log(`[${timestamp}] ${message}`);
+}
 
 interface OpenClawConfig {
   hooks?: {
@@ -65,65 +79,94 @@ async function createSession(apiKey: string) {
 }
 
 async function capture(token: string, sessionId: string): Promise<never> {
+  log("initializing capture client");
   const client = new CaptureClient({ sessionToken: token });
 
   let caffeinate: ChildProcess | null = null;
   if (process.platform === "darwin") {
-    caffeinate = spawn("caffeinate", ["-dims"], { stdio: "ignore" });
+    caffeinate = spawn("caffeinate", ["-dims"], { stdio: "ignore", detached: true });
+    caffeinate.unref();
   }
 
   const shutdown = async () => {
-    console.log("\nShutting down...");
-    await client.stopSession().catch(() => {});
-    await client.shutdown().catch(() => {});
+    log("shutdown requested");
+    await client.stopSession().catch((e) => log(`stopSession error: ${e.message}`));
+    await client.shutdown().catch((e) => log(`shutdown error: ${e.message}`));
     caffeinate?.kill();
     process.exit(0);
   };
 
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
+  process.on("SIGHUP", () => log("received SIGHUP, ignoring"));
+  process.on("uncaughtException", (err) => {
+    log(`uncaughtException: ${err.message}`);
+  });
 
-  await client.requestPermission("screen-capture");
-  await client.requestPermission("microphone");
+  // Request screen capture permission (required)
+  log("requesting screen-capture permission");
+  try {
+    await client.requestPermission("screen-capture");
+    log("screen-capture permission granted");
+  } catch (err: any) {
+    log(`screen-capture permission failed: ${err.message}`);
+    throw err;
+  }
+
+  // Request microphone permission (optional - continue without if denied)
+  let hasAudioPermission = false;
+  log("requesting microphone permission");
+  try {
+    await client.requestPermission("microphone");
+    hasAudioPermission = true;
+    log("microphone permission granted");
+  } catch (err: any) {
+    log(`microphone permission denied: ${err.message} - continuing without audio`);
+  }
 
   const channels = await client.listChannels();
   const display = channels.displays.default;
-  const systemAudio = channels.systemAudio.default;
+  const systemAudio = hasAudioPermission ? channels.systemAudio.default : null;
 
   if (!display) {
-    console.error("No display found");
-    process.exit(1);
+    log("no display found");
+    throw new Error("No display found");
   }
 
-  const selected = [
-    display && { channelId: display.id, type: "video" as const, store: true },
-    systemAudio && { channelId: systemAudio.id, type: "audio" as const, store: true },
-  ].filter(Boolean);
+  const selected: { channelId: string; type: "video" | "audio"; store: boolean }[] = [];
 
-  console.log(`\nRecording ${selected.length} channel(s):`);
-  selected.forEach((ch) => console.log(`  - ${ch!.type}: ${ch!.channelId}`));
+  if (display) {
+    selected.push({ channelId: display.id, type: "video", store: true });
+  }
+  if (systemAudio) {
+    selected.push({ channelId: systemAudio.id, type: "audio", store: true });
+  }
+
+  log(`recording ${selected.length} channel(s)`);
+  selected.forEach((ch) => log(`  - ${ch.type}: ${ch.channelId}`));
 
   await client.startSession({ sessionId, channels: selected as any });
 
-  console.log("\nRecording... (Ctrl+C to stop)\n");
+  log("recording started");
 
   return new Promise(() => {});
 }
 
 async function main() {
-  console.log("VideoDB Screen Monitor\n");
+  log("VideoDB Screen Monitor starting");
 
   const apiKey = getApiKey();
   if (!apiKey) {
+    log("API key not found");
     console.error("API key not found. Set it via:");
     console.error("  openclaw config set hooks.internal.entries.videodb.apiKey 'sk-xxx'");
     process.exit(1);
   }
 
-  console.log(`API key: ${apiKey.slice(0, 10)}...`);
+  log(`API key: ${apiKey.slice(0, 10)}...`);
 
   const { sessionId, token } = await createSession(apiKey);
-  console.log(`Session: ${sessionId}`);
+  log(`session created: ${sessionId}`);
 
   updateSessionId(sessionId);
 
@@ -131,6 +174,7 @@ async function main() {
 }
 
 main().catch((err) => {
+  log(`fatal error: ${err.message}`);
   console.error(err.message);
   process.exit(1);
 });
