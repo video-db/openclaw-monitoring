@@ -69,7 +69,8 @@ function getApiKey(): string | undefined {
 function setSkillEnv(key: string, value: string): void {
   const configPath = `${SKILL_CONFIG_BASE}.env.${key}`;
   try {
-    execSync(`openclaw config set ${configPath} '${value}'`, {
+    // Wrap in double quotes so value stays a string (not parsed as bool/number)
+    execSync(`openclaw config set ${configPath} '"${value}"'`, {
       timeout: 10000,
       stdio: "pipe",
     });
@@ -85,7 +86,7 @@ function clearSkillState(): void {
 
   log("Clearing skill state...");
   try {
-    execSync(`openclaw config set ${SKILL_CONFIG_BASE}.env.VIDEODB_IS_RUNNING 'false'`, {
+    execSync(`openclaw config set ${SKILL_CONFIG_BASE}.env.VIDEODB_IS_RUNNING '"false"'`, {
       timeout: 10000,
       stdio: "pipe",
     });
@@ -93,7 +94,7 @@ function clearSkillState(): void {
     // ignore - best effort
   }
   try {
-    execSync(`openclaw config set ${SKILL_CONFIG_BASE}.env.VIDEODB_CAPTURE_SESSION_ID ''`, {
+    execSync(`openclaw config set ${SKILL_CONFIG_BASE}.env.VIDEODB_CAPTURE_SESSION_ID '""'`, {
       timeout: 10000,
       stdio: "pipe",
     });
@@ -101,7 +102,7 @@ function clearSkillState(): void {
     // ignore - best effort
   }
   try {
-    execSync(`openclaw config set ${SKILL_CONFIG_BASE}.env.VIDEODB_MONITOR_PID ''`, {
+    execSync(`openclaw config set ${SKILL_CONFIG_BASE}.env.VIDEODB_MONITOR_PID '""'`, {
       timeout: 10000,
       stdio: "pipe",
     });
