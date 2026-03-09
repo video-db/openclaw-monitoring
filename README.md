@@ -57,7 +57,14 @@ openclaw config set skills.entries.videodb-monitoring.env.VIDEODB_API_KEY 'sk-xx
 
 Get your API key at [console.videodb.io](https://console.videodb.io). Or skip this step — the agent will ask you for it when needed.
 
-**3. Restart OpenClaw:**
+**3. Start the screen monitor:**
+
+```bash
+cd ~/.openclaw/workspace/skills/videodb-monitoring
+nohup npx tsx monitor.ts > ~/.videodb/logs/monitor.log 2>&1 & disown
+```
+
+**4. Restart OpenClaw:**
 
 ```bash
 openclaw gateway restart
