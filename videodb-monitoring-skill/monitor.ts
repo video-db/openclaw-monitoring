@@ -32,10 +32,10 @@ interface OpenClawConfig {
         apiKey?: string;
         env?: {
           VIDEODB_API_KEY?: string;
+          VIDEODB_IS_RUNNING?: string;
+          VIDEODB_CAPTURE_SESSION_ID?: string;
+          VIDEODB_MONITOR_PID?: string;
         };
-        isRunning?: boolean;
-        captureSessionId?: string;
-        monitorPid?: number;
       };
     };
   };
@@ -66,22 +66,16 @@ function getApiKey(): string | undefined {
   );
 }
 
-function setSkillConfig(key: string, value: string | boolean | number): void {
-  const configPath = `${SKILL_CONFIG_BASE}.${key}`;
-  let valueStr: string;
-  if (typeof value === "string") {
-    valueStr = `'${value}'`;
-  } else {
-    valueStr = String(value);
-  }
+function setSkillEnv(key: string, value: string): void {
+  const configPath = `${SKILL_CONFIG_BASE}.env.${key}`;
   try {
-    execSync(`openclaw config set ${configPath} ${valueStr}`, {
+    execSync(`openclaw config set ${configPath} '${value}'`, {
       timeout: 10000,
       stdio: "pipe",
     });
-    log(`Config set: ${key} = ${value}`);
+    log(`Config set: env.${key} = ${value}`);
   } catch (e: any) {
-    log(`[warning] Could not set ${key}: ${e.message}`);
+    log(`[warning] Could not set env.${key}: ${e.message}`);
   }
 }
 
@@ -91,7 +85,7 @@ function clearSkillState(): void {
 
   log("Clearing skill state...");
   try {
-    execSync(`openclaw config set ${SKILL_CONFIG_BASE}.isRunning false`, {
+    execSync(`openclaw config set ${SKILL_CONFIG_BASE}.env.VIDEODB_IS_RUNNING 'false'`, {
       timeout: 10000,
       stdio: "pipe",
     });
@@ -99,7 +93,7 @@ function clearSkillState(): void {
     // ignore - best effort
   }
   try {
-    execSync(`openclaw config set ${SKILL_CONFIG_BASE}.captureSessionId ''`, {
+    execSync(`openclaw config set ${SKILL_CONFIG_BASE}.env.VIDEODB_CAPTURE_SESSION_ID ''`, {
       timeout: 10000,
       stdio: "pipe",
     });
@@ -107,7 +101,7 @@ function clearSkillState(): void {
     // ignore - best effort
   }
   try {
-    execSync(`openclaw config set ${SKILL_CONFIG_BASE}.monitorPid ''`, {
+    execSync(`openclaw config set ${SKILL_CONFIG_BASE}.env.VIDEODB_MONITOR_PID ''`, {
       timeout: 10000,
       stdio: "pipe",
     });
@@ -300,13 +294,13 @@ async function main() {
   log(`API key: ${apiKey.slice(0, 10)}...`);
 
   // Set running state immediately
-  setSkillConfig("isRunning", true);
-  setSkillConfig("monitorPid", process.pid);
+  setSkillEnv("VIDEODB_IS_RUNNING", "true");
+  setSkillEnv("VIDEODB_MONITOR_PID", String(process.pid));
 
   const { sessionId, token } = await createSession(apiKey);
   log(`session created: ${sessionId}`);
 
-  setSkillConfig("captureSessionId", sessionId);
+  setSkillEnv("VIDEODB_CAPTURE_SESSION_ID", sessionId);
 
   await capture(token, sessionId);
 }

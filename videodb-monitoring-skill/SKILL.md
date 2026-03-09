@@ -31,7 +31,7 @@ If **not set** or empty:
 ### 2. Check Monitor is Running
 
 ```bash
-openclaw config get skills.entries.videodb-monitoring.isRunning
+openclaw config get skills.entries.videodb-monitoring.env.VIDEODB_IS_RUNNING
 ```
 
 If **not `true`**, start the monitor:
@@ -42,7 +42,7 @@ cd {baseDir} && nohup npx tsx monitor.ts > ~/.videodb/logs/monitor.log 2>&1 & di
 
 Verify it started:
 ```bash
-openclaw config get skills.entries.videodb-monitoring.captureSessionId
+openclaw config get skills.entries.videodb-monitoring.env.VIDEODB_CAPTURE_SESSION_ID
 ```
 
 If you get a session ID (e.g., `cap-xxxxxxxx-...`), the monitor is ready.
@@ -120,7 +120,7 @@ User: "Open example.com and send me the recording"
 
 ```bash
 # Check prerequisites
-openclaw config get skills.entries.videodb-monitoring.isRunning
+openclaw config get skills.entries.videodb-monitoring.env.VIDEODB_IS_RUNNING
 # true
 
 # Start time
@@ -157,6 +157,6 @@ Response:
 ## Troubleshooting
 
 If commands fail with "No capture session":
-1. Check if monitor is running: `openclaw config get skills.entries.videodb-monitoring.isRunning`
+1. Check if monitor is running: `openclaw config get skills.entries.videodb-monitoring.env.VIDEODB_IS_RUNNING`
 2. If not, start it (see Prerequisites above)
 3. If it shows running but still fails, restart the monitor

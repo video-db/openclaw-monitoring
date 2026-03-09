@@ -26,10 +26,10 @@ interface SkillConfig {
   apiKey?: string;
   env?: {
     VIDEODB_API_KEY?: string;
+    VIDEODB_IS_RUNNING?: string;
+    VIDEODB_CAPTURE_SESSION_ID?: string;
+    VIDEODB_MONITOR_PID?: string;
   };
-  isRunning?: boolean;
-  captureSessionId?: string;
-  monitorPid?: number;
 }
 
 interface Config {
@@ -49,13 +49,14 @@ function loadConfig(): { apiKey: string; sessionId: string } {
   try {
     const config: Config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
     const skillConfig = config.skills?.entries?.["videodb-monitoring"];
+    const env = skillConfig?.env;
 
     if (!apiKey) {
-      apiKey = skillConfig?.env?.VIDEODB_API_KEY ||
+      apiKey = env?.VIDEODB_API_KEY ||
                (typeof skillConfig?.apiKey === "string" ? skillConfig.apiKey : undefined);
     }
-    sessionId = sessionId || skillConfig?.captureSessionId;
-    isRunning = skillConfig?.isRunning === true;
+    sessionId = sessionId || env?.VIDEODB_CAPTURE_SESSION_ID;
+    isRunning = env?.VIDEODB_IS_RUNNING === "true";
   } catch {
     // ignore
   }

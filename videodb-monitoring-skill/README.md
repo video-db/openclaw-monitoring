@@ -77,8 +77,8 @@ disown
 
 Check status:
 ```bash
-openclaw config get skills.entries.videodb-monitoring.isRunning
-openclaw config get skills.entries.videodb-monitoring.captureSessionId
+openclaw config get skills.entries.videodb-monitoring.env.VIDEODB_IS_RUNNING
+openclaw config get skills.entries.videodb-monitoring.env.VIDEODB_CAPTURE_SESSION_ID
 ```
 
 ## Logs
@@ -120,7 +120,7 @@ Kill existing instances:
 ```bash
 pkill -9 -f videodb_recorder
 pkill -9 -f "monitor.ts"
-openclaw config set skills.entries.videodb-monitoring.isRunning false
+openclaw config set skills.entries.videodb-monitoring.env.VIDEODB_IS_RUNNING 'false'
 ```
 
 Then restart the monitor.
@@ -133,9 +133,9 @@ The monitor will continue without audio. Screen recording still works.
 
 Reset state manually:
 ```bash
-openclaw config set skills.entries.videodb-monitoring.isRunning false
-openclaw config set skills.entries.videodb-monitoring.captureSessionId ''
-openclaw config set skills.entries.videodb-monitoring.monitorPid ''
+openclaw config set skills.entries.videodb-monitoring.env.VIDEODB_IS_RUNNING 'false'
+openclaw config set skills.entries.videodb-monitoring.env.VIDEODB_CAPTURE_SESSION_ID ''
+openclaw config set skills.entries.videodb-monitoring.env.VIDEODB_MONITOR_PID ''
 ```
 
 ## File Structure
