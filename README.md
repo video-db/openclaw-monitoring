@@ -36,42 +36,43 @@
 
 ## Quick Start: OpenClaw Skill Integration
 
-If you're running OpenClaw and want the agent to automatically include screen recording links in every response, use the `monitor/` directory.
+Add on-demand screen recording capabilities to your OpenClaw agent using the `videodb-monitoring-skill/` directory.
 
 ### Setup
 
-**1. Configure OpenClaw:**
+**1. Install the skill:**
 
 ```bash
-openclaw config set hooks.internal.entries.videodb.apiKey 'sk-xxx'
+mkdir -p ~/.openclaw/workspace/skills/videodb-monitoring
+cp -r videodb-monitoring-skill/* ~/.openclaw/workspace/skills/videodb-monitoring/
+cd ~/.openclaw/workspace/skills/videodb-monitoring && npm install
 ```
 
-**2. Start the monitor:**
+**2. Configure API key:**
 
 ```bash
-cd monitor
-npm install
-npx tsx monitor.ts
+openclaw config set skills.entries.videodb-monitoring.env.VIDEODB_API_KEY 'sk-xxx'
+openclaw config set skills.entries.videodb-monitoring.enabled true
 ```
 
-Keep this terminal running.
-
-**3. Install the skill (new terminal):**
+**3. Restart OpenClaw:**
 
 ```bash
-cp -r monitor/openclaw-skill ~/.openclaw/workspace/skills/videodb
-cd ~/.openclaw/workspace/skills/videodb && npm install
+openclaw gateway restart
 ```
 
-**4. Restart OpenClaw:**
+That's it! The agent will now:
+- Check for API key (ask you for it if not set)
+- Auto-start the screen monitor when needed
+- Generate recording URLs when you request them
 
-```bash
-openclaw restart
-```
+### Usage Examples
 
-That's it! The agent will now include screen recording URLs in every response.
+- "Do X on the browser and send me the recording"
+- "What did I do in the last hour?"
+- "Find when I opened the spreadsheet"
 
-See [`monitor/README.md`](monitor/README.md) for detailed instructions and troubleshooting.
+See [`videodb-monitoring-skill/README.md`](videodb-monitoring-skill/README.md) for detailed instructions.
 
 ---
 

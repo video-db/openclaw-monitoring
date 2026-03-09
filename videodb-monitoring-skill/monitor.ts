@@ -8,6 +8,9 @@ import * as os from "os";
 const OPENCLAW_CONFIG_PATH = path.join(os.homedir(), ".openclaw", "openclaw.json");
 const LOG_DIR = path.join(os.homedir(), ".videodb", "logs");
 const LOG_FILE = path.join(LOG_DIR, "monitor.log");
+const SKILL_CONFIG_BASE = "skills.entries.videodb-monitoring";
+
+let cleanupDone = false;
 
 function log(message: string): void {
   const timestamp = new Date().toISOString();
@@ -22,13 +25,17 @@ function log(message: string): void {
 }
 
 interface OpenClawConfig {
-  hooks?: {
-    internal?: {
-      entries?: {
-        videodb?: {
-          apiKey?: string;
-          captureSessionId?: string;
+  skills?: {
+    entries?: {
+      "videodb-monitoring"?: {
+        enabled?: boolean;
+        apiKey?: string;
+        env?: {
+          VIDEODB_API_KEY?: string;
         };
+        isRunning?: boolean;
+        captureSessionId?: string;
+        monitorPid?: number;
       };
     };
   };
@@ -46,26 +53,68 @@ function readOpenClawConfig(): OpenClawConfig {
 }
 
 function getApiKey(): string | undefined {
+  // Check environment variables first
+  if (process.env.VIDEODB_API_KEY) return process.env.VIDEODB_API_KEY;
+  if (process.env.VIDEO_DB_API_KEY) return process.env.VIDEO_DB_API_KEY;
+
+  // Then check skills config
   const config = readOpenClawConfig();
+  const skillConfig = config.skills?.entries?.["videodb-monitoring"];
   return (
-    config.hooks?.internal?.entries?.videodb?.apiKey ||
-    process.env.VIDEODB_API_KEY ||
-    process.env.VIDEO_DB_API_KEY
+    skillConfig?.env?.VIDEODB_API_KEY ||
+    (typeof skillConfig?.apiKey === "string" ? skillConfig.apiKey : undefined)
   );
 }
 
-function updateSessionId(sessionId: string): void {
-  const configPath = "hooks.internal.entries.videodb.captureSessionId";
+function setSkillConfig(key: string, value: string | boolean | number): void {
+  const configPath = `${SKILL_CONFIG_BASE}.${key}`;
+  let valueStr: string;
+  if (typeof value === "string") {
+    valueStr = `'${value}'`;
+  } else {
+    valueStr = String(value);
+  }
   try {
-    execSync(`openclaw config set ${configPath} '${sessionId}'`, {
+    execSync(`openclaw config set ${configPath} ${valueStr}`, {
       timeout: 10000,
       stdio: "pipe",
     });
-    console.log(`  Config updated: ${configPath}`);
-  } catch {
-    console.log(`  [warning] Could not update config. Set manually:`);
-    console.log(`    openclaw config set ${configPath} '${sessionId}'`);
+    log(`Config set: ${key} = ${value}`);
+  } catch (e: any) {
+    log(`[warning] Could not set ${key}: ${e.message}`);
   }
+}
+
+function clearSkillState(): void {
+  if (cleanupDone) return;
+  cleanupDone = true;
+
+  log("Clearing skill state...");
+  try {
+    execSync(`openclaw config set ${SKILL_CONFIG_BASE}.isRunning false`, {
+      timeout: 10000,
+      stdio: "pipe",
+    });
+  } catch {
+    // ignore - best effort
+  }
+  try {
+    execSync(`openclaw config set ${SKILL_CONFIG_BASE}.captureSessionId ''`, {
+      timeout: 10000,
+      stdio: "pipe",
+    });
+  } catch {
+    // ignore - best effort
+  }
+  try {
+    execSync(`openclaw config set ${SKILL_CONFIG_BASE}.monitorPid ''`, {
+      timeout: 10000,
+      stdio: "pipe",
+    });
+  } catch {
+    // ignore - best effort
+  }
+  log("Skill state cleared");
 }
 
 async function createSession(apiKey: string) {
@@ -130,7 +179,7 @@ async function startIndexing(apiKey: string, sessionId: string) {
   if (audios.length > 0) {
     const audio = audios[0];
     try {
-      await audio.startTranscript({});
+      await audio.startTranscript();
       log("transcription started");
     } catch (err: any) {
       log(`transcription failed: ${err.message}`);
@@ -160,6 +209,7 @@ async function capture(token: string, sessionId: string): Promise<never> {
 
   const shutdown = async () => {
     log("shutdown requested");
+    clearSkillState();
     await client.stopSession().catch((e) => log(`stopSession error: ${e.message}`));
     await client.shutdown().catch((e) => log(`shutdown error: ${e.message}`));
     caffeinate?.kill();
@@ -171,6 +221,13 @@ async function capture(token: string, sessionId: string): Promise<never> {
   process.on("SIGHUP", () => log("received SIGHUP, ignoring"));
   process.on("uncaughtException", (err) => {
     log(`uncaughtException: ${err.message}`);
+    clearSkillState();
+    process.exit(1);
+  });
+  process.on("unhandledRejection", (reason: any) => {
+    log(`unhandledRejection: ${reason?.message || reason}`);
+    clearSkillState();
+    process.exit(1);
   });
 
   // Request screen capture permission (required)
@@ -236,22 +293,27 @@ async function main() {
   if (!apiKey) {
     log("API key not found");
     console.error("API key not found. Set it via:");
-    console.error("  openclaw config set hooks.internal.entries.videodb.apiKey 'sk-xxx'");
+    console.error(`  openclaw config set ${SKILL_CONFIG_BASE}.env.VIDEODB_API_KEY 'sk-xxx'`);
     process.exit(1);
   }
 
   log(`API key: ${apiKey.slice(0, 10)}...`);
 
+  // Set running state immediately
+  setSkillConfig("isRunning", true);
+  setSkillConfig("monitorPid", process.pid);
+
   const { sessionId, token } = await createSession(apiKey);
   log(`session created: ${sessionId}`);
 
-  updateSessionId(sessionId);
+  setSkillConfig("captureSessionId", sessionId);
 
   await capture(token, sessionId);
 }
 
 main().catch((err) => {
   log(`fatal error: ${err.message}`);
+  clearSkillState();
   console.error(err.message);
   process.exit(1);
 });

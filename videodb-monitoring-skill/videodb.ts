@@ -7,6 +7,8 @@ import * as os from "os";
 const CONFIG_PATH = path.join(os.homedir(), ".openclaw", "openclaw.json");
 const LOG_DIR = path.join(os.homedir(), ".videodb", "logs");
 const LOG_FILE = path.join(LOG_DIR, "skill.log");
+const SKILL_NAME = "videodb-monitoring";
+const SKILL_CONFIG_PATH = `skills.entries.${SKILL_NAME}`;
 
 function log(message: string): void {
   const timestamp = new Date().toISOString();
@@ -19,37 +21,66 @@ function log(message: string): void {
   }
 }
 
+interface SkillConfig {
+  enabled?: boolean;
+  apiKey?: string;
+  env?: {
+    VIDEODB_API_KEY?: string;
+  };
+  isRunning?: boolean;
+  captureSessionId?: string;
+  monitorPid?: number;
+}
+
 interface Config {
-  hooks?: {
-    internal?: {
-      entries?: {
-        videodb?: {
-          apiKey?: string;
-          captureSessionId?: string;
-        };
-      };
+  skills?: {
+    entries?: {
+      "videodb-monitoring"?: SkillConfig;
     };
   };
 }
 
 function loadConfig(): { apiKey: string; sessionId: string } {
-  let apiKey = process.env.VIDEODB_API_KEY;
+  // Check environment variables first
+  let apiKey = process.env.VIDEODB_API_KEY || process.env.VIDEO_DB_API_KEY;
   let sessionId = process.env.VIDEODB_CAPTURE_SESSION_ID;
+  let isRunning = false;
 
   try {
     const config: Config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
-    apiKey = apiKey || config.hooks?.internal?.entries?.videodb?.apiKey;
-    sessionId = sessionId || config.hooks?.internal?.entries?.videodb?.captureSessionId;
+    const skillConfig = config.skills?.entries?.["videodb-monitoring"];
+
+    if (!apiKey) {
+      apiKey = skillConfig?.env?.VIDEODB_API_KEY ||
+               (typeof skillConfig?.apiKey === "string" ? skillConfig.apiKey : undefined);
+    }
+    sessionId = sessionId || skillConfig?.captureSessionId;
+    isRunning = skillConfig?.isRunning === true;
   } catch {
     // ignore
   }
 
   if (!apiKey) {
-    console.error("VideoDB API key not configured");
+    console.error("ERROR: VideoDB API key not found.\n");
+    console.error("Please set your API key using one of these methods:\n");
+    console.error("1. Set it in OpenClaw config:");
+    console.error(`   openclaw config set ${SKILL_CONFIG_PATH}.env.VIDEODB_API_KEY 'sk-xxx'\n`);
+    console.error("2. Or provide it to the agent and it will set it for you.\n");
+    console.error("Get your API key at: https://console.videodb.io");
     process.exit(1);
   }
+
   if (!sessionId) {
-    console.error("No capture session. Run monitor.ts first.");
+    console.error("ERROR: No capture session found.\n");
+    if (!isRunning) {
+      console.error("The screen monitor is not running. Start it with:\n");
+      console.error("   cd ~/.openclaw/workspace/skills/videodb-monitoring");
+      console.error("   nohup npx tsx monitor.ts > ~/.videodb/logs/monitor.log 2>&1 &");
+      console.error("   disown\n");
+    } else {
+      console.error("Monitor shows as running but no session ID found.");
+      console.error("Try restarting the monitor.\n");
+    }
     process.exit(1);
   }
 
