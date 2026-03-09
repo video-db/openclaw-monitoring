@@ -1,5 +1,5 @@
 {
-  "name": "openclaw-videodb-skill",
+  "name": "openclaw-videodb-monitoring-skill",
   "version": "1.0.0",
   "type": "module",
   "bin": {
