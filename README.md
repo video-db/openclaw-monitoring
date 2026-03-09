@@ -40,20 +40,22 @@ Add on-demand screen recording capabilities to your OpenClaw agent using the `vi
 
 ### Setup
 
-**1. Install the skill:**
+**1. Clone and install the skill:**
 
 ```bash
+git clone https://github.com/video-db/openclaw-monitoring.git
 mkdir -p ~/.openclaw/workspace/skills/videodb-monitoring
-cp -r videodb-monitoring-skill/* ~/.openclaw/workspace/skills/videodb-monitoring/
+cp -r openclaw-monitoring/videodb-monitoring-skill/* ~/.openclaw/workspace/skills/videodb-monitoring/
 cd ~/.openclaw/workspace/skills/videodb-monitoring && npm install
 ```
 
-**2. Configure API key:**
+**2. Set your VideoDB API key:**
 
 ```bash
 openclaw config set skills.entries.videodb-monitoring.env.VIDEODB_API_KEY 'sk-xxx'
-openclaw config set skills.entries.videodb-monitoring.enabled true
 ```
+
+Get your API key at [console.videodb.io](https://console.videodb.io). Or skip this step — the agent will ask you for it when needed.
 
 **3. Restart OpenClaw:**
 
@@ -62,7 +64,6 @@ openclaw gateway restart
 ```
 
 That's it! The agent will now:
-- Check for API key (ask you for it if not set)
 - Auto-start the screen monitor when needed
 - Generate recording URLs when you request them
 
