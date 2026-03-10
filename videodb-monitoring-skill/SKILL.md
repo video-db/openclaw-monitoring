@@ -158,6 +158,8 @@ When user requests screen recording of a task:
    Screen recording: https://rt.stream.videodb.io/...
    ```
 
+   If the command prints a player page URL, prefer sharing that URL with the user.
+
 Indexing is not started automatically by the monitor. If the user also wants search, summaries, or transcripts, start indexing explicitly before those commands and stop it afterwards.
 
 ## Example

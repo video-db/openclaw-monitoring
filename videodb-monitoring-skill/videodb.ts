@@ -484,7 +484,10 @@ async function stream(startTs: number, endTs: number, args: string[]) {
     log(`stream: generated ${url}`);
     const duration = endTs - startTs;
     console.log(`📹 Screen recording (${duration}s): ${url}`);
-    console.log(`Player page: ${url}`);
+    console.log(`VideoDB stream URL: ${url}`);
+    if (screen.playerUrl) {
+      console.log(`Share this player page with the user: ${screen.playerUrl}`);
+    }
   } else {
     log("stream: no URL generated");
     console.log("Could not generate stream URL for the specified time range");
