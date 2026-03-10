@@ -12,25 +12,85 @@
     <img src="https://codaio.imgix.net/docs/_s5lUnUCIU/blobs/bl-RgjcFrrJjj/d3cbc44f8584ecd42f2a97d981a144dce6a66d83ddd5864f723b7808c7d1dfbc25034f2f25e1b2188e78f78f37bcb79d3c34ca937cbb08ca8b3da1526c29da9a897ab38eb39d084fd715028b7cc60eb595c68ecfa6fa0bb125ec2b09da65664a4f172c2f" alt="Logo" width="300" height="">
   </a>
 
-  <h1 align="center">OpenClaw Monitoring with VideoDB Capture</h1>
+  <h1 align="center">CCTV for OpenClaw Agents</h1>
 
   <p align="center">
-    This guide walks you through deploying a macOS EC2 instance on AWS, installing <a href="https://openclaw.ai">OpenClaw</a> on it, and using <a href="https://videodb.io">VideoDB Capture</a> to continuously monitor and record the agent's screen activity.
-    <br />
-    <a href="https://docs.videodb.io"><strong>Explore the docs »</strong></a>
+    <strong>Your AI agent just did something on a remote server. Do you know what?</strong>
     <br />
     <br />
-    <a href="#try-it-without-any-setup">Quick Start</a>
+    Record every agent session. Watch runs live. Replay with a shareable link. Get alerts when something looks suspicious — or hilarious.
+    <br />
+    <br />
+    <a href="#quick-start-openclaw-skill-integration">Quick Start</a>
     ·
-    <a href="#table-of-contents">View Guide</a>
+    <a href="#try-it-without-any-setup">Try Without Setup</a>
     ·
-    <a href="https://github.com/video-db/openclaw-monitoring/issues">Report Bug</a>
+    <a href="#full-setup-guide">Full Guide</a>
+    ·
+    <a href="https://docs.videodb.io">Docs</a>
   </p>
 </p>
 
-<p align="center">
-  <em>Windows and Linux guides coming soon.</em>
-</p>
+---
+
+## The Problem
+
+Right now, most people running AI agents are doing this:
+
+```
+Send task → Wait → Get "Success" in Slack → Hope for the best
+```
+
+That's not monitoring. That's faith.
+
+When your agent runs on a remote server for hours, you have no idea what it's actually doing. Did it complete the task? Did it get stuck on a captcha? Did it wander somewhere it shouldn't?
+
+You'd never know.
+
+## The Solution
+
+**VideoDB Monitoring** turns your OpenClaw agent into an observable, auditable worker.
+
+Every run becomes:
+- **A live stream** — watch your agent work in real-time
+- **A replayable recording** — shareable URL, not a dead video file
+- **Searchable moments** — find "when did it open the spreadsheet?"
+- **Webhook alerts** — get notified when something looks off
+
+Think: dashcam for your AI agent. Black box recorder for browser automation. CCTV for computer-use agents.
+
+---
+
+## What You Can Do
+
+### The Fun Stuff
+
+Ask your agent to do something, then watch it back:
+
+- "Play chess on chess.com and send me the recording"
+- "Create a Twitter account and show me how you did it"
+- "Check all the GitHub repos and give me a video report"
+- "Order food from Swiggy — I want to see the whole process"
+
+Every session becomes a clip you can share.
+
+### The Serious Stuff
+
+- **Security** — catch agents going off-script or accessing unexpected domains
+- **QA** — review agent workflows before pushing to production
+- **Debugging** — replay failures to see exactly where things went wrong
+- **Compliance** — full visual audit trail of agent actions
+- **Dataset prep** — build computer-use training data from real sessions
+
+### The Meta Stuff
+
+Your agent can even use its own recordings:
+
+- "Summarize what you did in the last 2 hours"
+- "Make a highlight video of today's work and post it to YouTube"
+- "Find the moment when you encountered the error"
+
+The agent becomes a content creator with receipts.
 
 ---
 
@@ -98,12 +158,18 @@ If you want to set up your own OpenClaw instance and monitor it 24/7, continue w
 
 ---
 
-## Table of Contents
+## Full Setup Guide
+
+### Table of Contents
 
 1. [EC2 Mac Setup](#1-ec2-mac-setup) — Provision and connect to a macOS instance on AWS
 2. [OpenClaw Setup](#2-openclaw-setup) — Install and configure the OpenClaw agent
 3. [VideoDB Monitoring](#3-videodb-monitoring) — Stream and record the agent's screen 24/7
 4. [Working with Sessions and Streams](#4-working-with-sessions-and-streams) — Retrieve sessions, inspect streams, and start indexing
+
+<p align="center">
+  <em>Windows and Linux guides coming soon.</em>
+</p>
 
 ---
 
@@ -425,6 +491,7 @@ async for msg in ws.receive():
         print(f"Alert [{data.get('label')}]: confidence={data.get('confidence')} {data.get('text')}")
 ```
 
+---
 
 ## Community & Support
 
@@ -434,6 +501,10 @@ async for msg in ws.receive():
 - **Console**: [Get API key](https://console.videodb.io)
 
 ---
+
+<p align="center">
+  <strong>Stop guessing what your AI is doing. Start watching.</strong>
+</p>
 
 <p align="center">Made with ❤️ by the <a href="https://videodb.io">VideoDB</a> team</p>
 
