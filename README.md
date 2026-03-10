@@ -156,7 +156,7 @@ start visual indexing for the current session with the prompt: "Describe what is
 ```
 
 ```text
-create an alert for this session when the agent sees an error dialog, captcha, login failure, or permission denied message
+set up a summary cron for this session that sends me a summary every 30 minutes
 ```
 
 ```text
