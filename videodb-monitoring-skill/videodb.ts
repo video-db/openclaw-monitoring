@@ -440,12 +440,22 @@ async function transcript(hours: number) {
   }
 }
 
-async function stream(startTs: number, endTs: number) {
-  log(`stream: start=${startTs} end=${endTs}`);
+async function stream(startTs: number, endTs: number, args: string[]) {
+  const title = parseFlagValue(args, "--title");
+  const description = parseFlagValue(args, "--description");
+  log(
+    `stream: start=${startTs} end=${endTs}` +
+      (title ? ` title="${title}"` : "") +
+      (description ? ` description="${description}"` : "")
+  );
 
   if (!startTs || !endTs || isNaN(startTs) || isNaN(endTs)) {
-    console.error("Usage: videodb stream <start_unix_timestamp> <end_unix_timestamp>");
-    console.error("Example: videodb stream 1709740800 1709740810");
+    console.error(
+      "Usage: videodb stream <start_unix_timestamp> <end_unix_timestamp> [--title TITLE] [--description DESCRIPTION]"
+    );
+    console.error(
+      'Example: videodb stream 1709740800 1709740810 --title "Checkout flow" --description "OpenClaw browser run"'
+    );
     process.exit(1);
   }
 
@@ -464,12 +474,17 @@ async function stream(startTs: number, endTs: number) {
   }
 
   const screen = screens[0];
-  const url = await screen.generateStream(startTs, endTs);
+  const url = await screen.generateStream(
+    startTs,
+    endTs,
+    title || description ? { title, description } : undefined
+  );
 
   if (url) {
     log(`stream: generated ${url}`);
     const duration = endTs - startTs;
     console.log(`📹 Screen recording (${duration}s): ${url}`);
+    console.log(`Player page: ${url}`);
   } else {
     log("stream: no URL generated");
     console.log("Could not generate stream URL for the specified time range");
@@ -542,7 +557,7 @@ async function main() {
     case "stream": {
       const startTs = parseInt(args[0], 10);
       const endTs = parseInt(args[1], 10);
-      await stream(startTs, endTs);
+      await stream(startTs, endTs, args);
       break;
     }
 
@@ -561,7 +576,9 @@ async function main() {
       console.log("  videodb stop-transcript [--engine E] [--mode graceful|force]");
       console.log("  videodb start-audio-index [--prompt P]");
       console.log("  videodb stop-audio-index");
-      console.log("  videodb stream <start> <end>   Generate stream URL (unix timestamps)");
+      console.log(
+        "  videodb stream <start> <end> [--title T] [--description D]   Generate stream URL"
+      );
       console.log("  videodb search <query>         Search screen recordings");
       console.log("  videodb summary [--hours N]    Get activity summary");
       console.log("  videodb transcript [--hours N] Get audio transcripts");

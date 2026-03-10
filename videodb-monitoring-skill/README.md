@@ -52,7 +52,7 @@ The agent will:
 2. Start the monitor if not running
 3. Start indexing only when needed for search, summaries, or transcripts
 4. Stop indexing when it is no longer needed to reduce cost
-5. Capture timestamps and generate stream URLs
+5. Capture timestamps and generate stream URLs, optionally with player title/description metadata
 6. Include recording URLs in responses when requested
 
 ### Example Requests
@@ -82,6 +82,24 @@ Check status:
 openclaw config get skills.entries.videodb-monitoring.env.VIDEODB_IS_RUNNING
 openclaw config get skills.entries.videodb-monitoring.env.VIDEODB_CAPTURE_SESSION_ID
 ```
+
+## Generate Stream URLs
+
+Basic stream generation:
+
+```bash
+cd ~/.openclaw/workspace/skills/videodb-monitoring
+npx tsx videodb.ts stream 1709740800 1709740830
+```
+
+With player metadata:
+
+```bash
+cd ~/.openclaw/workspace/skills/videodb-monitoring
+npx tsx videodb.ts stream 1709740800 1709740830 --title "Checkout flow" --description "OpenClaw browser run"
+```
+
+When metadata is provided, the skill also prints the player share page URL when available.
 
 ## Indexing Control
 

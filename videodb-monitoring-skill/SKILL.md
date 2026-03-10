@@ -61,9 +61,11 @@ Returns current Unix timestamp (seconds since epoch).
 
 ```bash
 cd {baseDir} && npx tsx videodb.ts stream <start_timestamp> <end_timestamp>
+cd {baseDir} && npx tsx videodb.ts stream <start_timestamp> <end_timestamp> --title "Checkout flow" --description "OpenClaw browser run"
 ```
 
 Creates a playable recording URL for the time range.
+If `--title` or `--description` is provided, the generated player share page uses that metadata.
 
 ### Start Indexing
 
@@ -146,6 +148,11 @@ When user requests screen recording of a task:
    cd {baseDir} && npx tsx videodb.ts stream <start_time> <end_time>
    ```
 
+   Optional player metadata:
+   ```bash
+   cd {baseDir} && npx tsx videodb.ts stream <start_time> <end_time> --title "Task recording" --description "Captured during OpenClaw task execution"
+   ```
+
 5. **Include URL in response**:
    ```
    Screen recording: https://rt.stream.videodb.io/...
@@ -174,8 +181,9 @@ cd {baseDir} && npx tsx videodb.ts now
 # 1709740830
 
 # Generate URL
-cd {baseDir} && npx tsx videodb.ts stream 1709740800 1709740830
+cd {baseDir} && npx tsx videodb.ts stream 1709740800 1709740830 --title "example.com walkthrough" --description "OpenClaw browser automation"
 # 📹 Screen recording (30s): https://rt.stream.videodb.io/abc123
+# Player page: https://player.videodb.io/watch?v=example-slug
 ```
 
 Response:
@@ -192,6 +200,7 @@ Response:
 | "Find when I opened the spreadsheet" | `start-indexing`, then `search "opened spreadsheet"` |
 | "What was said in that meeting?" | `start-indexing`, then `transcript` |
 | "Get the recording from 5 mins ago" | `stream` with timestamps |
+| "Record this and set the title/description" | `stream` with `--title` and `--description` |
 
 ## Troubleshooting
 

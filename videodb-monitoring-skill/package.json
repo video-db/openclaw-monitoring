@@ -6,7 +6,7 @@
     "videodb": "./videodb.ts"
   },
   "dependencies": {
-    "videodb": "^0.2.0"
+    "videodb": "^0.2.1"
   },
   "devDependencies": {
     "tsx": "^4.7.0",
