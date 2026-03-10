@@ -65,13 +65,50 @@ cd {baseDir} && npx tsx videodb.ts stream <start_timestamp> <end_timestamp>
 
 Creates a playable recording URL for the time range.
 
+### Start Indexing
+
+Start indexing only when the user asks for search, summaries, or transcripts:
+
+```bash
+cd {baseDir} && npx tsx videodb.ts start-indexing
+```
+
+This starts:
+- transcript capture for system audio
+- audio indexing
+- visual indexing
+
+You can also control them individually:
+
+```bash
+cd {baseDir} && npx tsx videodb.ts start-visual-index
+cd {baseDir} && npx tsx videodb.ts start-transcript
+cd {baseDir} && npx tsx videodb.ts start-audio-index
+```
+
+### Stop Indexing
+
+Stop indexing as soon as it is no longer needed to save cost:
+
+```bash
+cd {baseDir} && npx tsx videodb.ts stop-indexing
+```
+
+Individual stop commands:
+
+```bash
+cd {baseDir} && npx tsx videodb.ts stop-visual-index
+cd {baseDir} && npx tsx videodb.ts stop-transcript
+cd {baseDir} && npx tsx videodb.ts stop-audio-index
+```
+
 ### Search Recordings
 
 ```bash
 cd {baseDir} && npx tsx videodb.ts search "user opened Amazon"
 ```
 
-Searches indexed screen activity for matching events.
+Searches indexed screen activity for matching events. If no visual index exists yet, start indexing first.
 
 ### Activity Summary
 
@@ -114,6 +151,8 @@ When user requests screen recording of a task:
    Screen recording: https://rt.stream.videodb.io/...
    ```
 
+Indexing is not started automatically by the monitor. If the user also wants search, summaries, or transcripts, start indexing explicitly before those commands and stop it afterwards.
+
 ## Example
 
 User: "Open example.com and send me the recording"
@@ -149,9 +188,9 @@ Response:
 | User Request | Command |
 |--------------|---------|
 | "Record my screen while you do X" | Use workflow above |
-| "What did I do in the last hour?" | `summary --hours 1` |
-| "Find when I opened the spreadsheet" | `search "opened spreadsheet"` |
-| "What was said in that meeting?" | `transcript` |
+| "What did I do in the last hour?" | `start-indexing`, then `summary --hours 1`, then `stop-indexing` |
+| "Find when I opened the spreadsheet" | `start-indexing`, then `search "opened spreadsheet"` |
+| "What was said in that meeting?" | `start-indexing`, then `transcript` |
 | "Get the recording from 5 mins ago" | `stream` with timestamps |
 
 ## Troubleshooting
@@ -160,3 +199,9 @@ If commands fail with "No capture session":
 1. Check if monitor is running: `openclaw config get skills.entries.videodb-monitoring.env.VIDEODB_IS_RUNNING`
 2. If not, start it (see Prerequisites above)
 3. If it shows running but still fails, restart the monitor
+
+If summary/search/transcript say no index or no transcript:
+1. Start indexing with `cd {baseDir} && npx tsx videodb.ts start-indexing`
+2. Wait briefly for data to accumulate
+3. Retry the command
+4. Stop indexing with `cd {baseDir} && npx tsx videodb.ts stop-indexing` when done

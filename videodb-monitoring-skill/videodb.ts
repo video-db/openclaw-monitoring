@@ -9,6 +9,15 @@ const LOG_DIR = path.join(os.homedir(), ".videodb", "logs");
 const LOG_FILE = path.join(LOG_DIR, "skill.log");
 const SKILL_NAME = "videodb-monitoring";
 const SKILL_CONFIG_PATH = `skills.entries.${SKILL_NAME}`;
+const VISUAL_INDEX_NAME = "openclaw-visual-index";
+const AUDIO_INDEX_NAME = "openclaw-audio-index";
+const DEFAULT_VISUAL_PROMPT =
+  "Describe the screen: " +
+  "(1) Active application and current activity. " +
+  "(2) Browser status - is one open? What URL/page? " +
+  "(3) Any error dialogs, crashes, or warning messages? " +
+  "(4) Timestamp if a clock is visible.";
+const DEFAULT_AUDIO_PROMPT = "Summarize the audio content.";
 
 function log(message: string): void {
   const timestamp = new Date().toISOString();
@@ -88,13 +97,230 @@ function loadConfig(): { apiKey: string; sessionId: string } {
   return { apiKey, sessionId };
 }
 
-async function search(query: string) {
-  log(`search: query="${query}"`);
+function parseFlagValue(args: string[], flag: string): string | undefined {
+  const idx = args.indexOf(flag);
+  return idx !== -1 ? args[idx + 1] : undefined;
+}
+
+function isStoppedStatus(status?: string): boolean {
+  return status === "stopped" || status === "stop_requested" || status === "stopping";
+}
+
+async function loadSession() {
   const { apiKey, sessionId } = loadConfig();
   const conn = connect(apiKey);
   const coll = await conn.getCollection();
   const session = await coll.getCaptureSession(sessionId);
   await session.refresh();
+
+  return { apiKey, sessionId, conn, coll, session };
+}
+
+function getManagedIndexes(
+  indexes: Array<{
+    name?: string;
+    extractionType?: string;
+    status?: string;
+    rtstreamIndexId: string;
+    start: () => Promise<void>;
+    stop: () => Promise<void>;
+    getScenes?: (
+      start?: number,
+      end?: number,
+      page?: number,
+      pageSize?: number
+    ) => Promise<{ scenes: unknown[]; nextPage: boolean } | null>;
+  }>,
+  kind: "visual" | "audio"
+) {
+  const preferredName = kind === "visual" ? VISUAL_INDEX_NAME : AUDIO_INDEX_NAME;
+  const namedIndexes = indexes.filter((index) => index.name === preferredName);
+  if (namedIndexes.length > 0) return namedIndexes;
+
+  return indexes.filter((index) =>
+    kind === "visual" ? index.extractionType !== "transcript" : index.extractionType === "transcript"
+  );
+}
+
+async function startVisualIndex(prompt: string = DEFAULT_VISUAL_PROMPT) {
+  log(`startVisualIndex: prompt="${prompt}"`);
+  const { session } = await loadSession();
+  const screens = session.getRTStream("screen");
+  if (screens.length === 0) {
+    console.log("No screen stream found");
+    return;
+  }
+
+  const screen = screens[0];
+  const indexes = getManagedIndexes(await screen.listSceneIndexes(), "visual");
+  const runningIndex = indexes.find((index) => !isStoppedStatus(index.status));
+  if (runningIndex) {
+    console.log(`Visual indexing already running (${runningIndex.rtstreamIndexId})`);
+    return;
+  }
+
+  const stoppedIndex = indexes[0];
+  if (stoppedIndex) {
+    await stoppedIndex.start();
+    log(`startVisualIndex: restarted ${stoppedIndex.rtstreamIndexId}`);
+    console.log(`Started visual indexing (${stoppedIndex.rtstreamIndexId})`);
+    return;
+  }
+
+  const created = await screen.indexVisuals({
+    name: VISUAL_INDEX_NAME,
+    prompt,
+    batchConfig: { type: "time", value: 5, frameCount: 1 },
+  });
+
+  if (!created) {
+    console.log("Could not create visual index");
+    return;
+  }
+
+  log(`startVisualIndex: created ${created.rtstreamIndexId}`);
+  console.log(`Started visual indexing (${created.rtstreamIndexId})`);
+}
+
+async function stopVisualIndex() {
+  log("stopVisualIndex");
+  const { session } = await loadSession();
+  const screens = session.getRTStream("screen");
+  if (screens.length === 0) {
+    console.log("No screen stream found");
+    return;
+  }
+
+  const screen = screens[0];
+  const indexes = getManagedIndexes(await screen.listSceneIndexes(), "visual");
+  const runningIndexes = indexes.filter((index) => !isStoppedStatus(index.status));
+  if (runningIndexes.length === 0) {
+    console.log("No active visual index found");
+    return;
+  }
+
+  for (const index of runningIndexes) {
+    await index.stop();
+    log(`stopVisualIndex: stopped ${index.rtstreamIndexId}`);
+  }
+
+  console.log(`Stopped ${runningIndexes.length} visual index(es)`);
+}
+
+async function startTranscript(engine: string = "assemblyai") {
+  log(`startTranscript: engine=${engine}`);
+  const { session } = await loadSession();
+  const audios = session.getRTStream("system_audio");
+  if (audios.length === 0) {
+    console.log("No audio stream found");
+    return;
+  }
+
+  await audios[0].startTranscript(undefined, engine);
+  console.log(`Started transcript (${engine})`);
+}
+
+async function stopTranscript(engine: string = "assemblyai", mode: "graceful" | "force" = "graceful") {
+  log(`stopTranscript: engine=${engine} mode=${mode}`);
+  const { session } = await loadSession();
+  const audios = session.getRTStream("system_audio");
+  if (audios.length === 0) {
+    console.log("No audio stream found");
+    return;
+  }
+
+  await audios[0].stopTranscript(mode, engine);
+  console.log(`Stopped transcript (${engine}, ${mode})`);
+}
+
+async function startAudioIndex(prompt: string = DEFAULT_AUDIO_PROMPT) {
+  log(`startAudioIndex: prompt="${prompt}"`);
+  const { session } = await loadSession();
+  const audios = session.getRTStream("system_audio");
+  if (audios.length === 0) {
+    console.log("No audio stream found");
+    return;
+  }
+
+  const audio = audios[0];
+  const indexes = getManagedIndexes(await audio.listSceneIndexes(), "audio");
+  const runningIndex = indexes.find((index) => !isStoppedStatus(index.status));
+  if (runningIndex) {
+    console.log(`Audio indexing already running (${runningIndex.rtstreamIndexId})`);
+    return;
+  }
+
+  const stoppedIndex = indexes[0];
+  if (stoppedIndex) {
+    await stoppedIndex.start();
+    log(`startAudioIndex: restarted ${stoppedIndex.rtstreamIndexId}`);
+    console.log(`Started audio indexing (${stoppedIndex.rtstreamIndexId})`);
+    return;
+  }
+
+  const created = await audio.indexAudio({
+    name: AUDIO_INDEX_NAME,
+    prompt,
+    batchConfig: { type: "time", value: 30 },
+    autoStartTranscript: false,
+  });
+
+  if (!created) {
+    console.log("Could not create audio index. Start transcript first with `videodb start-transcript`.");
+    return;
+  }
+
+  log(`startAudioIndex: created ${created.rtstreamIndexId}`);
+  console.log(`Started audio indexing (${created.rtstreamIndexId})`);
+}
+
+async function stopAudioIndex() {
+  log("stopAudioIndex");
+  const { session } = await loadSession();
+  const audios = session.getRTStream("system_audio");
+  if (audios.length === 0) {
+    console.log("No audio stream found");
+    return;
+  }
+
+  const audio = audios[0];
+  const indexes = getManagedIndexes(await audio.listSceneIndexes(), "audio");
+  const runningIndexes = indexes.filter((index) => !isStoppedStatus(index.status));
+  if (runningIndexes.length === 0) {
+    console.log("No active audio index found");
+    return;
+  }
+
+  for (const index of runningIndexes) {
+    await index.stop();
+    log(`stopAudioIndex: stopped ${index.rtstreamIndexId}`);
+  }
+
+  console.log(`Stopped ${runningIndexes.length} audio index(es)`);
+}
+
+async function startIndexing(args: string[]) {
+  const visualPrompt = parseFlagValue(args, "--visual-prompt") || DEFAULT_VISUAL_PROMPT;
+  const audioPrompt = parseFlagValue(args, "--audio-prompt") || DEFAULT_AUDIO_PROMPT;
+  const engine = parseFlagValue(args, "--engine") || "assemblyai";
+
+  await startTranscript(engine);
+  await startAudioIndex(audioPrompt);
+  await startVisualIndex(visualPrompt);
+}
+
+async function stopIndexing(args: string[]) {
+  const engine = parseFlagValue(args, "--engine") || "assemblyai";
+  const mode = parseFlagValue(args, "--mode") === "force" ? "force" : "graceful";
+
+  await stopVisualIndex();
+  await stopAudioIndex();
+  await stopTranscript(engine, mode);
+}
+
+async function search(query: string) {
+  log(`search: query="${query}"`);
+  const { session } = await loadSession();
 
   const screens = session.getRTStream("screen");
   if (screens.length === 0) {
@@ -104,6 +330,12 @@ async function search(query: string) {
   }
 
   const screen = screens[0];
+  const indexes = getManagedIndexes(await screen.listSceneIndexes(), "visual");
+  if (indexes.length === 0) {
+    console.log("No visual index found. Start one with `videodb start-visual-index`.");
+    return;
+  }
+
   const results = await screen.search({ query, resultThreshold: 5 });
   const shots = results.getShots();
 
@@ -132,11 +364,7 @@ async function search(query: string) {
 
 async function summary(hours: number) {
   log(`summary: hours=${hours}`);
-  const { apiKey, sessionId } = loadConfig();
-  const conn = connect(apiKey);
-  const coll = await conn.getCollection();
-  const session = await coll.getCaptureSession(sessionId);
-  await session.refresh();
+  const { session } = await loadSession();
 
   const screens = session.getRTStream("screen");
   if (screens.length === 0) {
@@ -149,14 +377,18 @@ async function summary(hours: number) {
   const now = Math.floor(Date.now() / 1000);
   const start = now - Math.floor(hours * 3600);
 
-  const indexes = await screen.listSceneIndexes();
+  const indexes = getManagedIndexes(await screen.listSceneIndexes(), "visual");
   if (indexes.length === 0) {
     log("summary: no visual index found");
-    console.log("No visual index found. Make sure indexing is running.");
+    console.log("No visual index found. Start one with `videodb start-visual-index`.");
     return;
   }
 
   const index = indexes[0];
+  if (!index.getScenes) {
+    console.log("Selected visual index does not support scene retrieval");
+    return;
+  }
   const result = await index.getScenes(start, now, 1, 50);
 
   if (!result || result.scenes.length === 0) {
@@ -177,11 +409,7 @@ async function summary(hours: number) {
 
 async function transcript(hours: number) {
   log(`transcript: hours=${hours}`);
-  const { apiKey, sessionId } = loadConfig();
-  const conn = connect(apiKey);
-  const coll = await conn.getCollection();
-  const session = await coll.getCaptureSession(sessionId);
-  await session.refresh();
+  const { session } = await loadSession();
 
   const audios = session.getRTStream("system_audio");
   if (audios.length === 0) {
@@ -226,11 +454,7 @@ async function stream(startTs: number, endTs: number) {
     process.exit(1);
   }
 
-  const { apiKey, sessionId } = loadConfig();
-  const conn = connect(apiKey);
-  const coll = await conn.getCollection();
-  const session = await coll.getCaptureSession(sessionId);
-  await session.refresh();
+  const { session } = await loadSession();
 
   const screens = session.getRTStream("screen");
   if (screens.length === 0) {
@@ -256,6 +480,41 @@ async function main() {
   const [, , cmd, ...args] = process.argv;
 
   switch (cmd) {
+    case "start-indexing":
+      await startIndexing(args);
+      break;
+
+    case "stop-indexing":
+      await stopIndexing(args);
+      break;
+
+    case "start-visual-index":
+      await startVisualIndex(parseFlagValue(args, "--prompt") || DEFAULT_VISUAL_PROMPT);
+      break;
+
+    case "stop-visual-index":
+      await stopVisualIndex();
+      break;
+
+    case "start-transcript":
+      await startTranscript(parseFlagValue(args, "--engine") || "assemblyai");
+      break;
+
+    case "stop-transcript":
+      await stopTranscript(
+        parseFlagValue(args, "--engine") || "assemblyai",
+        parseFlagValue(args, "--mode") === "force" ? "force" : "graceful"
+      );
+      break;
+
+    case "start-audio-index":
+      await startAudioIndex(parseFlagValue(args, "--prompt") || DEFAULT_AUDIO_PROMPT);
+      break;
+
+    case "stop-audio-index":
+      await stopAudioIndex();
+      break;
+
     case "search":
       if (args.length === 0) {
         console.error("Usage: videodb search <query>");
@@ -294,6 +553,14 @@ async function main() {
     default:
       console.log("VideoDB Screen Recording Tool\n");
       console.log("Commands:");
+      console.log("  videodb start-indexing [--visual-prompt P] [--audio-prompt P] [--engine E]");
+      console.log("  videodb stop-indexing [--engine E] [--mode graceful|force]");
+      console.log("  videodb start-visual-index [--prompt P]");
+      console.log("  videodb stop-visual-index");
+      console.log("  videodb start-transcript [--engine E]");
+      console.log("  videodb stop-transcript [--engine E] [--mode graceful|force]");
+      console.log("  videodb start-audio-index [--prompt P]");
+      console.log("  videodb stop-audio-index");
       console.log("  videodb stream <start> <end>   Generate stream URL (unix timestamps)");
       console.log("  videodb search <query>         Search screen recordings");
       console.log("  videodb summary [--hours N]    Get activity summary");

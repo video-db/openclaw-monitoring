@@ -50,8 +50,10 @@ The skill is **on-demand** — the agent will use it when:
 The agent will:
 1. Check if the API key is configured (ask you for it if not)
 2. Start the monitor if not running
-3. Capture timestamps and generate stream URLs
-4. Include recording URLs in responses when requested
+3. Start indexing only when needed for search, summaries, or transcripts
+4. Stop indexing when it is no longer needed to reduce cost
+5. Capture timestamps and generate stream URLs
+6. Include recording URLs in responses when requested
 
 ### Example Requests
 
@@ -79,6 +81,32 @@ Check status:
 ```bash
 openclaw config get skills.entries.videodb-monitoring.env.VIDEODB_IS_RUNNING
 openclaw config get skills.entries.videodb-monitoring.env.VIDEODB_CAPTURE_SESSION_ID
+```
+
+## Indexing Control
+
+The monitor now only records. Indexing is controlled explicitly through `videodb.ts` so you only pay for it when needed.
+
+Start all indexing:
+```bash
+cd ~/.openclaw/workspace/skills/videodb-monitoring
+npx tsx videodb.ts start-indexing
+```
+
+Stop all indexing:
+```bash
+cd ~/.openclaw/workspace/skills/videodb-monitoring
+npx tsx videodb.ts stop-indexing
+```
+
+Granular commands:
+```bash
+npx tsx videodb.ts start-visual-index
+npx tsx videodb.ts stop-visual-index
+npx tsx videodb.ts start-transcript
+npx tsx videodb.ts stop-transcript
+npx tsx videodb.ts start-audio-index
+npx tsx videodb.ts stop-audio-index
 ```
 
 ## Logs
@@ -116,7 +144,9 @@ disown
 
 ### "Another recorder instance is already running"
 
-Kill existing instances:
+The monitor now performs a pre-cleanup on startup and will try to stop the previous monitor PID plus any lingering recorder helper processes automatically.
+
+If you still need to clean up manually:
 ```bash
 pkill -9 -f videodb_recorder
 pkill -9 -f "monitor.ts"
@@ -128,6 +158,19 @@ Then restart the monitor.
 ### "Permission denied" for microphone
 
 The monitor will continue without audio. Screen recording still works.
+
+### "No visual index found" or "No transcripts"
+
+Start indexing when you need it:
+```bash
+cd ~/.openclaw/workspace/skills/videodb-monitoring
+npx tsx videodb.ts start-indexing
+```
+
+Run your search/summary/transcript command, then stop indexing afterwards:
+```bash
+npx tsx videodb.ts stop-indexing
+```
 
 ### Stale state after crash
 
