@@ -1,6 +1,5 @@
 <!-- PROJECT SHIELDS -->
 [![Python][python-shield]][python-url]
-[![Flask][flask-shield]][flask-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
 [![Website][website-shield]][website-url]
@@ -102,11 +101,20 @@ Add on-demand screen recording to your existing OpenClaw agent.
 
 **1. Install the skill:**
 
+Point your OpenClaw agent at this repo and ask it to install the skill:
+
+```text
+please install https://github.com/video-db/openclaw-monitoring/tree/readme-cctv-positioning skill and set it up
+```
+
+Or install it manually:
+
 ```bash
 git clone https://github.com/video-db/openclaw-monitoring.git
 mkdir -p ~/.openclaw/workspace/skills/videodb-monitoring
 cp -r openclaw-monitoring/videodb-monitoring-skill/* ~/.openclaw/workspace/skills/videodb-monitoring/
-cd ~/.openclaw/workspace/skills/videodb-monitoring && npm install
+cd ~/.openclaw/workspace/skills/videodb-monitoring
+npm install
 ```
 
 **2. Set your VideoDB API key:**
@@ -125,6 +133,10 @@ nohup npx tsx monitor.ts > ~/.videodb/logs/monitor.log 2>&1 & disown
 openclaw gateway restart
 ```
 
+The monitor writes process information and capture IDs into `~/.openclaw/openclaw.json`.
+
+This starts the monitor as a background process and restarts OpenClaw so the skill is available to the agent. When the agent uses the skill, it starts the VideoDB capture process. Ingestion is billed at `$0.084 / hour`. See the [Capture SDK overview](https://docs.videodb.io/pages/ingest/capture-sdks/overview) for more documentation.
+
 **4. Use it:**
 
 - "Do X on the browser and send me the recording"
@@ -133,40 +145,39 @@ openclaw gateway restart
 
 See [`videodb-monitoring-skill/README.md`](videodb-monitoring-skill/README.md) for details.
 
-### Option 2: 24/7 Monitoring Backend
+### Option 2: Indexing with VideoDB
 
-For continuous monitoring with alerts and webhooks, run the full backend:
+VideoDB also provides OpenClaw skills that let your agent work with captured sessions after recording starts.
 
-**1. Set up environment:**
+With these skills, OpenClaw can:
+- Start visual indexing or audio indexing for a session using a prompt
+- Set up summary cron jobs for recurring reports
+- Configure alerts for important events or failures
+- Search across recorded sessions for specific moments
 
-```bash
-git clone https://github.com/video-db/openclaw-monitoring.git
-cd openclaw-monitoring
-echo "VIDEO_DB_API_KEY=your_api_key_here" > .env
+Copy-paste examples:
+
+```text
+start visual indexing for the current session with the prompt: "Describe what is on screen, the active app, and what the agent is doing."
 ```
 
-**2. Start the backend** (on your local machine or server):
-
-```bash
-uv run backend.py
+```text
+start audio indexing for the current session with the prompt: "Transcribe the audio and summarize the important decisions being discussed."
 ```
 
-This starts a Cloudflare tunnel and prints the public URL.
-
-**3. Start the client** (on the Mac running OpenClaw, via VNC):
-
-```bash
-brew install uv
-uv run start_monitoring.py
+```text
+set up a summary cron for this session that sends me a summary every 30 minutes
 ```
 
-Enter the backend URL when prompted. Grant screen capture permission.
+```text
+create an alert for this session when the agent sees an error dialog, captcha, login failure, or permission denied message
+```
 
-The client streams screen + audio 24/7 to VideoDB. The backend handles:
-- Session management
-- Real-time transcription and visual indexing
-- Alerts (agent errors, suspicious behavior)
-- Webhook notifications
+```text
+search this session for when the agent opened the spreadsheet and share the results with timestamps
+```
+
+See the [Advanced Setup Guide](ADVANCE_SETUP_GUIDE.md) for setup details and SDK/code examples.
 
 ### Need to set up OpenClaw from scratch?
 
@@ -176,190 +187,18 @@ See the [Full Setup Guide](SETUP_GUIDE.md) for EC2 Mac provisioning and OpenClaw
 
 ## Try It Without Any Setup
 
-Skip the installation and connect to VideoDB's hosted OpenClaw agent:
+Skip the installation and try indexing against our hosted real-time OpenClaw session at [matrix.videodb.io](https://matrix.videodb.io):
 
 ```bash
 echo "VIDEO_DB_API_KEY=your_api_key_here" > .env
 uv run try_without_setup.py
 ```
 
-This connects to the agent's live streams, starts indexing, and prints events to your terminal. Press `Ctrl+C` to stop and search the indexed content.
+This connects to the public agent's live streams, starts indexing, and prints events to your terminal. Press `Ctrl+C` to stop and search the indexed content.
 
 ---
 
-## Working with Recordings
-
-Once monitoring is running, you can work with sessions and streams using the VideoDB Python SDK.
-
-### Get a Session
-
-```python
-import videodb
-
-conn = videodb.connect(api_key="your_api_key")
-session = conn.get_capture_session("your_capture_session_id")
-```
-
-The `capture_session_id` is printed when the client starts.
-
-### Get Streams
-
-```python
-displays = session.get_rtstream("screen")
-system_audios = session.get_rtstream("system_audio")
-
-display = displays[0]
-audio = system_audios[0]
-```
-
-### Watch Live
-
-Get the live stream URL while the agent is working:
-
-```python
-live_url = display.get_stream_url()
-print(f"Watch live: {live_url}")
-```
-
-### Get Shareable Replay Link
-
-Generate a playable URL for any recording:
-
-```python
-# Get the replay URL for the entire session
-replay_url = display.get_stream_url()
-print(f"Replay: {replay_url}")
-
-# Or generate a clip from a specific time range
-clip_url = display.generate_clip(start=120, end=180)  # 2:00 to 3:00
-print(f"Clip: {clip_url}")
-```
-
-### Search Recordings
-
-Find specific moments using natural language:
-
-```python
-results = display.search(query="agent encountered an error", result_threshold=5)
-shots = results.get_shots()
-
-for shot in shots:
-    print(f"[{shot.start:.0f}s - {shot.end:.0f}s] {shot.text}")
-```
-
-### Create Alerts
-
-Get notified when specific conditions appear on screen:
-
-```python
-# Define what to watch for
-event_id = conn.create_event(
-    event_prompt="The agent is displaying an error or crash dialog on screen.",
-    label="agent-error",
-)
-
-# Start visual indexing with alerts
-visual_index = display.index_visuals(
-    prompt="Describe what is on screen.",
-    ws_connection_id=ws.connection_id,
-)
-
-alert_id = visual_index.create_alert(
-    event_id=event_id,
-    callback_url="https://your-webhook-url/webhook",
-    ws_connection_id=ws.connection_id,
-)
-```
-
-### Index for Searchability
-
-Start AI indexing to make recordings searchable:
-
-```python
-# Set up WebSocket for real-time results
-ws = conn.connect_websocket()
-ws = await ws.connect()
-
-# Visual indexing (what's on screen)
-visual_index = display.index_visuals(
-    prompt="Describe the active application and what the agent is doing.",
-    batch_config={"type": "time", "value": 5, "frame_count": 1},
-    ws_connection_id=ws.connection_id,
-)
-
-# Audio indexing (transcription + summarization)
-audio.start_transcript(ws_connection_id=ws.connection_id)
-audio.index_audio(
-    prompt="Summarize the audio content.",
-    batch_config={"type": "time", "value": 30},
-    ws_connection_id=ws.connection_id,
-)
-```
-
-### Listen for Real-Time Events
-
-```python
-async for msg in ws.receive():
-    channel = msg.get("channel")
-    data = msg.get("data", {})
-
-    if channel == "transcript":
-        print(f"Transcript: {data.get('text')}")
-    elif channel == "visual_index":
-        print(f"Visual: {data.get('text')}")
-    elif channel == "alert":
-        print(f"ALERT [{data.get('label')}]: {data.get('text')}")
-```
-
-### Stop and Export
-
-When you're done, stop the session and export the recording:
-
-```python
-# Stop the capture session
-session.stop()
-
-# Export to a permanent video file
-video = session.export()
-print(f"Exported: {video.stream_url}")
-```
-
----
-
-## Customizing Alerts
-
-The backend includes default alerts in `backend.py`:
-
-```python
-ALERTS = [
-    {
-        "label": "agent-error",
-        "prompt": "The screen shows an error dialog, crash report, or exception traceback.",
-    },
-    {
-        "label": "browser-open",
-        "prompt": "A web browser window is open and visible on screen.",
-    },
-]
-```
-
-Add your own:
-
-```python
-ALERTS = [
-    # ... existing alerts ...
-    {
-        "label": "login-attempt",
-        "prompt": "The agent is on a login page or entering credentials.",
-    },
-    {
-        "label": "payment-page",
-        "prompt": "The agent is on a checkout or payment page.",
-    },
-]
-```
-
-Alerts fire in real-time via WebSocket and can trigger webhook callbacks.
+See the [Advanced Setup Guide](ADVANCE_SETUP_GUIDE.md) for working with recordings, search, alerts, indexing, and SDK examples.
 
 ---
 
@@ -383,8 +222,6 @@ Alerts fire in real-time via WebSocket and can trigger webhook callbacks.
 <!-- MARKDOWN LINKS & IMAGES -->
 [python-shield]: https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white
 [python-url]: https://www.python.org/
-[flask-shield]: https://img.shields.io/badge/Flask-3.1-000000?style=for-the-badge&logo=flask&logoColor=white
-[flask-url]: https://flask.palletsprojects.com/
 [stars-shield]: https://img.shields.io/github/stars/video-db/openclaw-monitoring.svg?style=for-the-badge
 [stars-url]: https://github.com/video-db/openclaw-monitoring/stargazers
 [issues-shield]: https://img.shields.io/github/issues/video-db/openclaw-monitoring.svg?style=for-the-badge
