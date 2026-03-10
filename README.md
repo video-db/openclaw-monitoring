@@ -147,26 +147,12 @@ See [`videodb-monitoring-skill/README.md`](videodb-monitoring-skill/README.md) f
 
 ### Option 2: Indexing with VideoDB
 
-VideoDB also provides OpenClaw skills that let your agent work with captured sessions after recording starts.
+After recording starts, OpenClaw can use VideoDB to index sessions, create alerts, and search important moments.
 
-With these skills, OpenClaw can:
-- Start visual indexing or audio indexing for a session using a prompt
-- Set up summary cron jobs for recurring reports
-- Configure alerts for important events or failures
-- Search across recorded sessions for specific moments
-
-Copy-paste examples:
+Example prompts:
 
 ```text
 start visual indexing for the current session with the prompt: "Describe what is on screen, the active app, and what the agent is doing."
-```
-
-```text
-start audio indexing for the current session with the prompt: "Transcribe the audio and summarize the important decisions being discussed."
-```
-
-```text
-set up a summary cron for this session that sends me a summary every 30 minutes
 ```
 
 ```text
