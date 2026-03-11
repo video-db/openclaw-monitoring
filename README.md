@@ -104,7 +104,7 @@ Add on-demand screen recording to your existing OpenClaw agent.
 Point your OpenClaw agent at this repo and ask it to install the skill:
 
 ```text
-please install https://github.com/video-db/openclaw-monitoring/tree/readme-cctv-positioning skill and set it up
+please install https://github.com/video-db/openclaw-monitoring/ skill and set it up
 ```
 
 Or install it manually:
